@@ -77,6 +77,7 @@
             color: #888;
             font-size: 14px;
             font-weight: 300;
+            text-align: center;
         }
         .cat-btn {
             width: 80px;
@@ -93,6 +94,7 @@
             z-index: 2;
             outline: none;
             position: relative;
+            -webkit-tap-highlight-color: transparent;
         }
         .cat-btn svg {
             width: 32px;
@@ -118,7 +120,7 @@
 <body>
     <div class="device-container">
         <div class="display-panel">
-            <span class="loader">Загрузка пушистого...</span>
+            <span class="loader">Ищем кота...</span>
             <img id="catImg" class="cat-image" src="" alt="Случайный кот">
         </div>
         <button class="cat-btn" onclick="fetchNewCat()" aria-label="Показать кота">
@@ -131,25 +133,55 @@
     <script>
         const imgElement = document.getElementById('catImg');
         const loaderText = document.querySelector('.loader');
-        const apiUrl = 'https://api.thecatapi.com/v1/images/search';
+        
+        // Основной источник (часто блокируется на мобильных)
+        const mainApi = 'https://api.thecatapi.com/v1/images/search';
+        
+        // Запасной источник (прямая ссылка, работает везде)
+        // Добавляем случайное время, чтобы картинка не повторялась
+        const backupUrl = 'https://cataas.com/cat?t=';
 
         async function fetchNewCat() {
+            // Сброс
             imgElement.classList.remove('loaded');
             loaderText.style.display = 'block';
+            loaderText.innerText = 'Ищем кота...';
+
+            // Обработчик загрузки картинки (общий для обоих способов)
+            imgElement.onload = () => {
+                imgElement.classList.add('loaded');
+                loaderText.style.display = 'none';
+            };
+            imgElement.onerror = () => {
+                // Если даже картинка не грузится
+                loaderText.innerText = 'Коты убежали :(';
+            };
+
             try {
-                const response = await fetch(apiUrl);
+                // План А: Пробуем красивый API
+                // Ставим таймаут 3 секунды, если мобильный инет "тупит", сразу идем к плану Б
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const response = await fetch(mainApi, { signal: controller.signal });
                 const data = await response.json();
-                const catUrl = data[0].url;
-                imgElement.onload = () => {
-                    imgElement.classList.add('loaded');
-                    loaderText.style.display = 'none';
-                };
-                imgElement.src = catUrl;
+                
+                if (data && data[0] && data[0].url) {
+                    imgElement.src = data[0].url;
+                } else {
+                    throw new Error('Нет данных');
+                }
+                clearTimeout(timeoutId);
+
             } catch (error) {
-                console.error('Ошибка:', error);
-                loaderText.innerText = "Ошибка сети. Попробуйте снова!";
+                console.log('Сработала защита от блокировки:', error);
+                // План Б: Используем запасной сервер без JSON, просто картинкой
+                // Это работает надежнее на мобильных сетях
+                imgElement.src = backupUrl + new Date().getTime();
             }
         }
+
+        // Старт
         fetchNewCat();
     </script>
 </body>
