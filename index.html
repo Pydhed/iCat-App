@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iCat Clean</title>
+    <title>iCat Mobile Stable</title>
     <style>
         /* --- Настройки переменных для стиля "Дорогой пластик" --- */
         :root {
@@ -59,7 +59,7 @@
         .display-panel {
             width: 100%;
             flex-grow: 1;
-            background-color: var(--screen-off-bg); /* Темный экран */
+            background-color: var(--screen-off-bg); 
             border-radius: 32px;
             overflow: hidden;
             position: relative;
@@ -99,11 +99,11 @@
             transform: scale(1);
         }
         
-        /* Надпись статуса: оставим только для ошибки */
+        /* Надпись статуса: только для ошибки */
         .status-msg {
             position: absolute;
             font-size: 16px;
-            color: #ff5757; /* Красный цвет для ошибки */
+            color: #ff5757; 
             z-index: 1;
             font-weight: 500;
             letter-spacing: 1px;
@@ -178,43 +178,58 @@
     <script>
         const img = document.getElementById('catImg');
         const status = document.getElementById('status');
-        
         let timeoutTimer;
 
-        // Генератор случайного числа в диапазоне
-        const getRandomInt = (min, max) => {
-            min = Math.ceil(min);
-            max = Math.floor(max);
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        };
+        // Главная функция для получения кота
+        async function fetchCat() {
+            // Используем fetch для получения JSON с прямой ссылкой на кота
+            const url = 'https://api.thecatapi.com/v1/images/search?limit=1';
 
-        function nextCat() {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Проверяем, что получили данные и ссылку
+                if (data && data.length > 0 && data[0].url) {
+                    return data[0].url;
+                } else {
+                    throw new Error("Не удалось получить URL кота.");
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                return null;
+            }
+        }
+
+
+        // Функция для загрузки и отображения
+        async function nextCat() {
             img.classList.remove('loaded');
-            // Убираем статус, чтобы экран был черным во время загрузки
             status.style.display = 'none'; 
             clearTimeout(timeoutTimer); 
 
-            // 1. Генерируем случайные размеры (600-700 и 800-900)
-            const randomWidth = getRandomInt(600, 700);
-            const randomHeight = getRandomInt(800, 900);
+            // Шаг 1: Получаем прямую ссылку на фото через Fetch
+            const imageUrl = await fetchCat();
 
-            // 2. Случайные ключевые слова для поиска
-            const keywords = ['cat', 'kitty', 'funny']; 
-            const randomKeywords = keywords.join(',');
+            if (!imageUrl) {
+                 status.innerText = "Ошибка: не удалось подключиться к серверу API (проверьте сеть).";
+                 status.style.display = 'block';
+                 return;
+            }
 
-            // 3. Создаем URL, который максимально отличается от предыдущего
-            const uniqueUrl = 
-                `https://loremflickr.com/${randomWidth}/${randomHeight}/${randomKeywords}?t=${new Date().getTime()}`;
-
-            // Страховка от зависания
+            // Шаг 2: Устанавливаем таймер для отслеживания загрузки
             timeoutTimer = setTimeout(() => {
                 if (!img.classList.contains('loaded')) {
-                    status.innerText = "Сбой сети, пробуем еще раз...";
-                    status.style.display = 'block'; // Показываем ошибку
-                    nextCat(); 
+                    status.innerText = "Слишком долго, пробуем другую ссылку...";
+                    status.style.display = 'block'; 
+                    nextCat(); // Повторная попытка
                 }
-            }, 5000); 
+            }, 6000); // Увеличим таймер до 6 секунд для мобильной сети
 
+            // Шаг 3: Загружаем изображение
             img.onload = () => {
                 clearTimeout(timeoutTimer);
                 img.classList.add('loaded');
@@ -222,12 +237,14 @@
             };
 
             img.onerror = () => {
-                status.innerText = "Ошибка фото, пробуем другую комбинацию...";
-                status.style.display = 'block'; // Показываем ошибку
-                nextCat(); 
+                clearTimeout(timeoutTimer);
+                status.innerText = "Сбой загрузки фото, пробуем еще раз...";
+                status.style.display = 'block';
+                nextCat(); // Повторная попытка
             };
 
-            img.src = uniqueUrl;
+            // Устанавливаем полученный URL. Добавляем уникальный штамп, чтобы исключить кэширование
+            img.src = `${imageUrl}?t=${new Date().getTime()}`;
         }
 
         // При первом запуске загружаем первого кота
