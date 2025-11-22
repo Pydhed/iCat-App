@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-    <title>iCat LoremFlickr</title>
+    <title>iCat Random</title>
     <style>
         :root{
             --main-bg:#eef1f5;
@@ -166,12 +166,27 @@ const img = document.getElementById('catImg');
 const status = document.getElementById('status');
 let isLoading = false;
 
-// loremflickr: случайные коты по категории cats, без JSON
-// пример: https://loremflickr.com/640/480/cats
-function buildCatUrl() {
-    const w = 800;   // можно уменьшить до 600/700, если надо ещё быстрее
-    const h = 1000;
-    return 'https://loremflickr.com/' + w + '/' + h + '/cats?lock=' + Date.now();
+// Альтернативные источники изображений котов
+const catImageSources = [
+    // The Cat API (cataas.com) - популярный и надежный
+    () => `https://cataas.com/cat?width=800&height=1000&t=${Date.now()}`,
+    
+    // PlaceKitten.com - простой и быстрый
+    () => `https://placekitten.com/800/1000?image=${Math.floor(Math.random() * 16) + 1}`,
+    
+    // Random.cat - еще один популярный источник
+    () => `https://api.thecatapi.com/v1/images/search?format=src&mime_types=jpg,png&size=med`,
+    
+    // Резервный через picsum.photos с тегом cats
+    () => `https://picsum.photos/800/1000?random=${Date.now()}`
+];
+
+let currentSourceIndex = 0;
+
+function getNextCatUrl() {
+    const source = catImageSources[currentSourceIndex];
+    currentSourceIndex = (currentSourceIndex + 1) % catImageSources.length;
+    return source();
 }
 
 function nextCat() {
@@ -179,32 +194,43 @@ function nextCat() {
     isLoading = true;
 
     status.style.display = 'block';
-    status.textContent = 'Загружаем кота...';
+    status.textContent = 'Поиск котика...';
     img.classList.remove('loaded');
     img.removeAttribute('src');
 
-    const url = buildCatUrl();
+    const url = getNextCatUrl();
 
-    const slowTimer = setTimeout(() => {
+    const errorTimer = setTimeout(() => {
         if (!img.classList.contains('loaded')) {
-            status.textContent = 'Медленный интернет...';
+            handleImageError();
         }
-    }, 4000);
+    }, 10000);
 
     img.onload = () => {
-        clearTimeout(slowTimer);
+        clearTimeout(errorTimer);
         status.style.display = 'none';
         img.classList.add('loaded');
         isLoading = false;
     };
 
     img.onerror = () => {
-        clearTimeout(slowTimer);
-        status.textContent = 'Кот не загрузился, нажми ещё раз.';
-        isLoading = false;
+        clearTimeout(errorTimer);
+        handleImageError();
     };
 
     img.src = url;
+}
+
+function handleImageError() {
+    status.textContent = 'Поиск котика...';
+    isLoading = false;
+    
+    // Автоматически пробуем следующий источник через короткую задержку
+    setTimeout(() => {
+        if (!isLoading) {
+            nextCat();
+        }
+    }, 500);
 }
 
 // первый кот при старте
