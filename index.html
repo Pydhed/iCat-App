@@ -10,7 +10,6 @@
             --white: #ffffff;
             --shadow-light: #ffffff;
             --shadow-dark: #d1d9e6;
-            --text-color: #444;
             --accent: #007aff;
         }
         body {
@@ -21,8 +20,7 @@
             align-items: center;
             min-height: 100vh;
             background-color: var(--bg-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
+            font-family: -apple-system, sans-serif;
         }
         .device-container {
             width: 85%;
@@ -34,17 +32,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            position: relative;
         }
-        /* Экран */
         .display-panel {
             width: 100%;
             aspect-ratio: 16/9;
-            background-color: #e0e5ec;
+            background-color: #000;
             border-radius: 20px;
             overflow: hidden;
             position: relative;
-            box-shadow: inset 5px 5px 10px #d1d9e6, inset -5px -5px 10px #ffffff;
             margin-bottom: 30px;
             display: flex;
             justify-content: center;
@@ -55,20 +50,11 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.4s ease-in-out;
-            z-index: 2;
+            transition: opacity 0.3s;
         }
         .cat-image.loaded {
             opacity: 1;
         }
-        .status-text {
-            position: absolute;
-            color: #999;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 1;
-        }
-        /* Кнопка */
         .cat-btn {
             width: 70px;
             height: 70px;
@@ -81,8 +67,6 @@
             justify-content: center;
             align-items: center;
             outline: none;
-            transition: transform 0.1s ease;
-            -webkit-tap-highlight-color: transparent;
         }
         .cat-btn:active {
             box-shadow: inset 5px 5px 10px #d1d9e6, inset -5px -5px 10px #ffffff;
@@ -96,18 +80,12 @@
         .cat-btn:active svg {
             fill: var(--accent);
         }
-        .hint {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #b0b0b0;
-        }
     </style>
 </head>
 <body>
 
     <div class="device-container">
         <div class="display-panel">
-            <div class="status-text">Загрузка...</div>
             <img id="catImg" class="cat-image" src="" alt="Cat">
         </div>
 
@@ -116,41 +94,37 @@
                 <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
             </svg>
         </button>
-        <div class="hint">Нажми для нового кота</div>
     </div>
 
     <script>
-        const img = document.getElementById('catImg');
-        const status = document.querySelector('.status-text');
+        // СПИСОК: Прямые ссылки на надежные сервера (Википедия, Unsplash)
+        // Это работает как обычный просмотр страниц, это не заблокируют.
+        const catLinks = [
+            "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg",
+            "https://upload.wikimedia.org/wikipedia/commons/4/4d/Cat_November_2010-1a.jpg",
+            "https://upload.wikimedia.org/wikipedia/commons/b/b6/Felis_catus-cat_on_snow.jpg",
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Adorable-animal-cat-20787.jpg/800px-Adorable-animal-cat-20787.jpg",
+            "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1573865526739-10659fec78a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1495360019602-e0019216adfe?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Kittyply_edit1.jpg/800px-Kittyply_edit1.jpg",
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Six_weeks_old_cat_%28aka%29.jpg/800px-Six_weeks_old_cat_%28aka%29.jpg"
+        ];
 
-        // Используем LoremFlickr - он работает как обычная картинка, без API запросов
-        // Это позволяет обойти блокировки скриптов мобильными операторами
-        const baseUrl = "https://loremflickr.com/800/450/cat";
+        const img = document.getElementById('catImg');
 
         function nextCat() {
-            // 1. Скрываем текущее фото
             img.classList.remove('loaded');
-            status.innerText = "Ищем...";
-
-            // 2. Генерируем уникальную ссылку (чтобы браузер не брал из кэша)
-            const uniqueId = new Date().getTime();
-            const newUrl = baseUrl + "?random=" + uniqueId;
-
-            // 3. Назначаем загрузку
-            img.onload = () => {
-                img.classList.add('loaded');
-                status.innerText = "";
-            };
-
-            img.onerror = () => {
-                status.innerText = "Интернет спит :(";
-            };
-
-            // 4. Меняем источник. Браузер загрузит это как обычную картинку.
-            img.src = newUrl;
+            
+            // Выбираем случайную ссылку из списка выше
+            const randomLink = catLinks[Math.floor(Math.random() * catLinks.length)];
+            
+            img.onload = () => img.classList.add('loaded');
+            img.src = randomLink;
         }
 
-        // Запуск при старте
+        // Запуск
         nextCat();
     </script>
 
