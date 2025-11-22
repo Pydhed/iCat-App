@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>iCat Mobile Stable</title>
     <style>
         /* --- Настройки переменных для стиля "Дорогой пластик" --- */
@@ -166,7 +165,7 @@
     <div class="device-chassis">
         <div class="display-panel">
             <div class="status-msg" id="status" style="display: none;"></div> 
-            <img id="catImg" class="cat-image" src="" alt="Cat" crossorigin="anonymous">
+            <img id="catImg" class="cat-image" src="" alt="Cat">
         </div>
 
         <button class="cat-btn" onclick="nextCat()" aria-label="Next">
@@ -180,113 +179,79 @@
         const img = document.getElementById('catImg');
         const status = document.getElementById('status');
         let timeoutTimer;
-        let retryCount = 0;
-        const MAX_RETRIES = 3;
+        let isLoading = false;
 
-        // Главная функция для получения кота с улучшенной обработкой ошибок
+        // Получение URL кота с простой обработкой
         async function fetchCat() {
-            // Используем HTTPS и добавляем параметры для лучшей совместимости
-            const url = 'https://api.thecatapi.com/v1/images/search?limit=1&mime_types=jpg,png';
+            const url = 'https://api.thecatapi.com/v1/images/search';
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    },
-                    mode: 'cors',
-                    cache: 'no-cache',
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
                 
-                // Проверяем, что получили данные и ссылку, принудительно заменяем на HTTPS
                 if (data && data.length > 0 && data[0].url) {
-                    let imageUrl = data[0].url;
-                    // Убеждаемся что URL использует HTTPS
-                    imageUrl = imageUrl.replace(/^http:\/\//i, 'https://');
-                    return imageUrl;
+                    // Принудительно используем HTTPS
+                    return data[0].url.replace(/^http:\/\//i, 'https://');
                 } else {
                     throw new Error("Не удалось получить URL кота.");
                 }
             } catch (error) {
                 console.error("Fetch Error:", error);
-                
-                // Более детальная информация об ошибке
-                if (error.name === 'AbortError') {
-                    console.error("Запрос прерван по таймауту");
-                } else if (error.message.includes('Failed to fetch')) {
-                    console.error("Ошибка сети - проверьте подключение");
-                }
-                
                 return null;
             }
         }
 
-        // Функция для загрузки и отображения с повторными попытками
+        // Функция для загрузки и отображения
         async function nextCat() {
+            if (isLoading) return; // Предотвращаем множественные клики
+            isLoading = true;
+
             img.classList.remove('loaded');
             status.style.display = 'none'; 
             clearTimeout(timeoutTimer); 
 
-            // Шаг 1: Получаем прямую ссылку на фото
+            // Получаем URL
             const imageUrl = await fetchCat();
 
             if (!imageUrl) {
-                retryCount++;
-                if (retryCount < MAX_RETRIES) {
-                    status.innerText = `Ошибка сети, попытка ${retryCount}/${MAX_RETRIES}...`;
-                    status.style.display = 'block';
-                    setTimeout(nextCat, 2000); // Повтор через 2 секунды
-                } else {
-                    status.innerText = "Не удалось подключиться. Проверьте интернет.";
-                    status.style.display = 'block';
-                    retryCount = 0;
-                }
+                status.innerText = "Ошибка подключения к API";
+                status.style.display = 'block';
+                isLoading = false;
                 return;
             }
 
-            // Сброс счетчика при успешном получении URL
-            retryCount = 0;
-
-            // Шаг 2: Устанавливаем таймер для отслеживания загрузки
+            // Таймер на загрузку изображения
             timeoutTimer = setTimeout(() => {
                 if (!img.classList.contains('loaded')) {
-                    status.innerText = "Медленная загрузка, пробуем другое фото...";
+                    status.innerText = "Медленная загрузка...";
                     status.style.display = 'block'; 
-                    nextCat(); // Повторная попытка
+                    isLoading = false;
                 }
-            }, 15000); // 15 секунд для медленных мобильных сетей
+            }, 10000); // 10 секунд
 
-            // Шаг 3: Загружаем изображение
+            // Обработчики загрузки изображения
             img.onload = () => {
                 clearTimeout(timeoutTimer);
                 img.classList.add('loaded');
                 status.style.display = 'none'; 
+                isLoading = false;
             };
 
             img.onerror = () => {
                 clearTimeout(timeoutTimer);
-                status.innerText = "Ошибка загрузки изображения, пробуем еще раз...";
+                status.innerText = "Ошибка загрузки фото";
                 status.style.display = 'block';
-                setTimeout(nextCat, 1000); // Повтор через 1 секунду
+                isLoading = false;
             };
 
-            // Устанавливаем URL с кэш-бастингом
-            img.src = `${imageUrl}?t=${new Date().getTime()}`;
+            // Устанавливаем URL
+            img.src = imageUrl;
         }
 
-        // При первом запуске загружаем первого кота
+        // Загружаем первого кота при старте
         nextCat();
     </script>
 
