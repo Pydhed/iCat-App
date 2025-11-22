@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iCat</title>
+    <title>iCat Turbo</title>
     <style>
         :root {
             --bg-color: #f0f0f3;
@@ -21,6 +21,7 @@
             min-height: 100vh;
             background-color: var(--bg-color);
             font-family: -apple-system, sans-serif;
+            overflow: hidden; /* Блокируем прокрутку страницы */
         }
         .device-container {
             width: 85%;
@@ -32,11 +33,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            position: relative;
         }
         .display-panel {
             width: 100%;
             aspect-ratio: 16/9;
-            background-color: #000;
+            background-color: #dce3eb; /* Цвет выключенного экрана */
             border-radius: 20px;
             overflow: hidden;
             position: relative;
@@ -44,17 +46,32 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            box-shadow: inset 3px 3px 7px rgba(0,0,0,0.1);
         }
         .cat-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s ease-out;
+            z-index: 2;
         }
         .cat-image.loaded {
             opacity: 1;
         }
+        /* Крутилка загрузки */
+        .spinner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #ccc;
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 1;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .cat-btn {
             width: 70px;
             height: 70px;
@@ -67,10 +84,12 @@
             justify-content: center;
             align-items: center;
             outline: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s;
         }
         .cat-btn:active {
             box-shadow: inset 5px 5px 10px #d1d9e6, inset -5px -5px 10px #ffffff;
-            transform: scale(0.96);
+            transform: scale(0.95);
         }
         .cat-btn svg {
             width: 28px;
@@ -80,12 +99,18 @@
         .cat-btn:active svg {
             fill: var(--accent);
         }
+        .hint {
+            margin-top: 15px;
+            color: #aaa;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
 
     <div class="device-container">
         <div class="display-panel">
+            <div class="spinner"></div>
             <img id="catImg" class="cat-image" src="" alt="Cat">
         </div>
 
@@ -94,39 +119,27 @@
                 <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
             </svg>
         </button>
+        <div class="hint">Fast Mode • w=600px</div>
     </div>
 
     <script>
-        // СПИСОК: Прямые ссылки на надежные сервера (Википедия, Unsplash)
-        // Это работает как обычный просмотр страниц, это не заблокируют.
-        const catLinks = [
-            "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg",
-            "https://upload.wikimedia.org/wikipedia/commons/4/4d/Cat_November_2010-1a.jpg",
-            "https://upload.wikimedia.org/wikipedia/commons/b/b6/Felis_catus-cat_on_snow.jpg",
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Adorable-animal-cat-20787.jpg/800px-Adorable-animal-cat-20787.jpg",
-            "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            "https://images.unsplash.com/photo-1573865526739-10659fec78a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            "https://images.unsplash.com/photo-1495360019602-e0019216adfe?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Kittyply_edit1.jpg/800px-Kittyply_edit1.jpg",
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Six_weeks_old_cat_%28aka%29.jpg/800px-Six_weeks_old_cat_%28aka%29.jpg"
-        ];
-
         const img = document.getElementById('catImg');
-
-        function nextCat() {
-            img.classList.remove('loaded');
-            
-            // Выбираем случайную ссылку из списка выше
-            const randomLink = catLinks[Math.floor(Math.random() * catLinks.length)];
-            
-            img.onload = () => img.classList.add('loaded');
-            img.src = randomLink;
-        }
-
-        // Запуск
-        nextCat();
-    </script>
-
-</body>
-</html>
+        
+        // СПИСОК ССЫЛОК С ПАРАМЕТРАМИ ОПТИМИЗАЦИИ
+        // w=600 -> ширина 600px (мало весит)
+        // q=60 -> качество 60% (глаз не видит разницы, интернет радуется)
+        const catLinks = [
+            "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1495360019602-e0019216adfe?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1529778873920-4da4926a7071?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1592194996308-7b43878e84a6?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1543852786-1cf6624b9987?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1548247416-ec66f4900b2e?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1586289883499-f11d280218fb?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1561948955-570b270e7c36?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=600&q=60",
+            "https://images.unsplash.com/photo-1494256997604-0e170c507203?auto=format&fit=crop&w=600&q=60",
+            "
