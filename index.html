@@ -180,33 +180,79 @@
         const status = document.getElementById('status');
         let timeoutTimer;
         let isLoading = false;
+        
+        // Список альтернативных API для котов
+        const CAT_APIS = [
+            {
+                name: 'TheCatAPI',
+                url: 'https://api.thecatapi.com/v1/images/search',
+                parse: (data) => data[0]?.url
+            },
+            {
+                name: 'Cataas',
+                url: 'https://cataas.com/cat?json=true',
+                parse: (data) => 'https://cataas.com' + data.url
+            },
+            {
+                name: 'CataasDirect',
+                url: 'https://cataas.com/cat?t=' + Date.now(),
+                parse: null // прямая ссылка на изображение
+            }
+        ];
+        
+        let currentApiIndex = 0;
 
-        // Получение URL кота с простой обработкой
+        // Получение URL кота с несколькими API
         async function fetchCat() {
-            const url = 'https://api.thecatapi.com/v1/images/search';
-
+            const api = CAT_APIS[currentApiIndex];
+            
             try {
-                const response = await fetch(url);
+                // Если API возвращает прямое изображение
+                if (!api.parse) {
+                    return api.url;
+                }
+                
+                const response = await fetch(api.url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    cache: 'no-store'
+                });
+                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const data = await response.json();
                 
-                if (data && data.length > 0 && data[0].url) {
-                    // Принудительно используем HTTPS
-                    return data[0].url.replace(/^http:\/\//i, 'https://');
-                } else {
+                const data = await response.json();
+                const imageUrl = api.parse(data);
+                
+                if (!imageUrl) {
                     throw new Error("Не удалось получить URL кота.");
                 }
+                
+                // Принудительно используем HTTPS
+                return imageUrl.replace(/^http:\/\//i, 'https://');
+                
             } catch (error) {
-                console.error("Fetch Error:", error);
-                return null;
+                console.error(`Ошибка ${api.name}:`, error);
+                
+                // Переключаемся на следующий API
+                currentApiIndex = (currentApiIndex + 1) % CAT_APIS.length;
+                
+                // Если попробовали все API
+                if (currentApiIndex === 0) {
+                    return null;
+                }
+                
+                // Пробуем следующий API
+                return fetchCat();
             }
         }
 
         // Функция для загрузки и отображения
         async function nextCat() {
-            if (isLoading) return; // Предотвращаем множественные клики
+            if (isLoading) return;
             isLoading = true;
 
             img.classList.remove('loaded');
@@ -217,22 +263,22 @@
             const imageUrl = await fetchCat();
 
             if (!imageUrl) {
-                status.innerText = "Ошибка подключения к API";
+                status.innerText = "Ошибка: все API недоступны";
                 status.style.display = 'block';
                 isLoading = false;
                 return;
             }
 
-            // Таймер на загрузку изображения
+            // Таймер на загрузку
             timeoutTimer = setTimeout(() => {
                 if (!img.classList.contains('loaded')) {
-                    status.innerText = "Медленная загрузка...";
+                    status.innerText = "Медленная загрузка, попробуйте ещё раз";
                     status.style.display = 'block'; 
                     isLoading = false;
                 }
-            }, 10000); // 10 секунд
+            }, 15000);
 
-            // Обработчики загрузки изображения
+            // Обработчики загрузки
             img.onload = () => {
                 clearTimeout(timeoutTimer);
                 img.classList.add('loaded');
@@ -242,16 +288,18 @@
 
             img.onerror = () => {
                 clearTimeout(timeoutTimer);
-                status.innerText = "Ошибка загрузки фото";
+                status.innerText = "Ошибка загрузки, пробуем другой API...";
                 status.style.display = 'block';
                 isLoading = false;
+                // Автоматически пробуем следующий API
+                setTimeout(nextCat, 1000);
             };
 
-            // Устанавливаем URL
-            img.src = imageUrl;
+            // Устанавливаем URL с кэш-бастингом
+            img.src = imageUrl + (imageUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
         }
 
-        // Загружаем первого кота при старте
+        // Загружаем первого кота
         nextCat();
     </script>
 
