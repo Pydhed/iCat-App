@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iCat Manual</title>
+    <title>iCat Clean</title>
     <style>
         /* --- Настройки переменных для стиля "Дорогой пластик" --- */
         :root {
@@ -59,7 +59,7 @@
         .display-panel {
             width: 100%;
             flex-grow: 1;
-            background-color: var(--screen-off-bg);
+            background-color: var(--screen-off-bg); /* Темный экран */
             border-radius: 32px;
             overflow: hidden;
             position: relative;
@@ -99,16 +99,18 @@
             transform: scale(1);
         }
         
+        /* Надпись статуса: оставим только для ошибки */
         .status-msg {
             position: absolute;
             font-size: 16px;
-            color: #888;
+            color: #ff5757; /* Красный цвет для ошибки */
             z-index: 1;
             font-weight: 500;
             letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
         }
 
-        /* --- Кнопка (Ручной режим) --- */
+        /* --- Кнопка --- */
         .cat-btn {
             width: 85px;
             height: 85px;
@@ -146,7 +148,6 @@
             transition: fill 0.2s, transform 0.2s;
         }
 
-        /* Эффект нажатия - вдавливание */
         .cat-btn:active {
             box-shadow: 
                 inset 5px 5px 10px rgba(166, 171, 189, 0.9), 
@@ -163,7 +164,7 @@
 
     <div class="device-chassis">
         <div class="display-panel">
-            <div class="status-msg" id="status">Нажми кнопку</div>
+            <div class="status-msg" id="status" style="display: none;"></div> 
             <img id="catImg" class="cat-image" src="" alt="Cat">
         </div>
 
@@ -180,33 +181,49 @@
         
         let timeoutTimer;
 
-        // Функция загрузки следующего кота (только по клику)
+        // Генератор случайного числа в диапазоне
+        const getRandomInt = (min, max) => {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        };
+
         function nextCat() {
             img.classList.remove('loaded');
-            status.innerText = "Идет загрузка...";
-            
-            // Сбрасываем таймер из предыдущей попытки
+            // Убираем статус, чтобы экран был черным во время загрузки
+            status.style.display = 'none'; 
             clearTimeout(timeoutTimer); 
 
-            const randomId = Math.floor(Math.random() * 99999);
-            const uniqueUrl = `https://loremflickr.com/700/1000/cat?lock=${randomId}`;
+            // 1. Генерируем случайные размеры (600-700 и 800-900)
+            const randomWidth = getRandomInt(600, 700);
+            const randomHeight = getRandomInt(800, 900);
 
-            // Страховка от зависания: если не загрузится за 4 сек, пробуем еще раз
+            // 2. Случайные ключевые слова для поиска
+            const keywords = ['cat', 'kitty', 'funny']; 
+            const randomKeywords = keywords.join(',');
+
+            // 3. Создаем URL, который максимально отличается от предыдущего
+            const uniqueUrl = 
+                `https://loremflickr.com/${randomWidth}/${randomHeight}/${randomKeywords}?t=${new Date().getTime()}`;
+
+            // Страховка от зависания
             timeoutTimer = setTimeout(() => {
                 if (!img.classList.contains('loaded')) {
+                    status.innerText = "Сбой сети, пробуем еще раз...";
+                    status.style.display = 'block'; // Показываем ошибку
                     nextCat(); 
                 }
-            }, 4000);
+            }, 5000); 
 
             img.onload = () => {
                 clearTimeout(timeoutTimer);
                 img.classList.add('loaded');
-                status.innerText = ""; // Очищаем статус
+                status.style.display = 'none'; 
             };
 
             img.onerror = () => {
-                // Если ошибка - пробуем следующего
-                status.innerText = "Ошибка сети, пробуем еще раз...";
+                status.innerText = "Ошибка фото, пробуем другую комбинацию...";
+                status.style.display = 'block'; // Показываем ошибку
                 nextCat(); 
             };
 
