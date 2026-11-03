@@ -2,123 +2,151 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-    <title>iCat TheCatAPI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Случайные коты</title>
     <style>
-        body{
-            margin:0;
-            padding:20px;
-            height:100dvh;
-            width:100vw;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            background:radial-gradient(circle at center,#f8f9fb 0%,#eef1f5 100%);
-            font-family:-apple-system,system-ui,sans-serif;
+        body {
+            margin: 0;
+            padding: 20px;
+            height: 100dvh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #f8f9fb 0%, #eef1f5 100%);
+            font-family: -apple-system, system-ui, sans-serif;
             box-sizing: border-box;
         }
-        .device-chassis{
-            width:100%;
-            height:100%;
-            max-width:500px;
-            max-height:850px;
-            background:#fff;
-            border-radius:40px;
-            padding:25px;
-            box-shadow:0 10px 30px rgba(0,0,0,0.2);
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            justify-content:space-between;
+        .device-chassis {
+            width: 100%;
+            height: 100%;
+            max-width: 500px;
+            max-height: 850px;
+            background: #fff;
+            border-radius: 40px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
             box-sizing: border-box;
         }
-        .display-panel{
-            width:100%;
-            flex-grow:1;
-            background-color:#2c2c2e;
-            border-radius:32px;
-            overflow:hidden;
-            position:relative;
-            margin-bottom:25px;
-            display:flex;
-            justify-content:center;
-            align-items:center;
+        .display-panel {
+            width: 100%;
+            flex-grow: 1;
+            background-color: #2c2c2e;
+            border-radius: 32px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .cat-image{
-            width:100%;
-            height:100%;
-            object-fit:cover;
-            opacity:0;
-            transition:opacity .5s ease-in-out,filter .5s,transform .5s;
-            filter:blur(10px);
-            transform:scale(1.05);
+        .cat-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out, filter 0.5s, transform 0.5s;
+            filter: blur(10px);
+            transform: scale(1.05);
             -webkit-touch-callout: default; 
         }
-        .cat-image.loaded{
-            opacity:1;
-            filter:blur(0);
-            transform:scale(1);
+        .cat-image.loaded {
+            opacity: 1;
+            filter: blur(0);
+            transform: scale(1);
         }
-        .status-msg{
-            position:absolute;
-            font-size:16px;
-            color:#ffeb3b;
-            z-index:4;
-            font-weight:500;
-            text-shadow:0 0 5px rgba(0,0,0,0.7);
-            text-align:center;
-            padding:0 16px;
+        /* Анимация загрузки вместо текста */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top: 4px solid #ffeb3b;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            display: none;
+            z-index: 4;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-msg {
+            position: absolute;
+            bottom: 20px;
+            font-size: 14px;
+            color: #fff;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            z-index: 5;
+            font-weight: 500;
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(4px);
         }
         .controls {
             display: flex;
-            gap: 20px;
+            gap: 30px;
             justify-content: center;
             width: 100%;
+            padding-bottom: 10px;
         }
-        .cat-btn{
-            width:85px;
-            height:85px;
-            border-radius:50%;
-            border:none;
-            background:#eee;
-            box-shadow:0 5px 15px rgba(0,0,0,0.2);
-            cursor:pointer;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            transition:all .15s ease;
+        .cat-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: none;
+            background: #f0f0f5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
         }
-        .cat-btn svg{
-            width:34px;
-            height:34px;
-            fill:#555;
+        .cat-btn:active {
+            transform: scale(0.92);
+            background: #e4e4eb;
         }
-        .cat-btn:active{
-            transform:scale(0.95);
+        .cat-btn svg {
+            width: 32px;
+            height: 32px;
+            fill: #333;
         }
+        /* Цветовые акценты для кнопок */
+        .btn-save { background: #e8f5e9; }
+        .btn-save svg { fill: #2e7d32; }
+        .btn-next { background: #e3f2fd; }
+        .btn-next svg { fill: #1565c0; }
     </style>
 </head>
 <body>
 
 <div class="device-chassis">
     <div class="display-panel">
-        <div class="status-msg" id="status" style="display:none;"></div>
-        <img id="catImg" class="cat-image" src="" alt="Cat">
+        <div class="loader" id="loader"></div>
+        <div class="status-msg" id="status"></div>
+        <img id="catImg" class="cat-image" src="" alt="Фото кота">
     </div>
 
     <div class="controls">
-        <!-- Кнопка сохранения -->
-        <button class="cat-btn" onclick="askSave()" aria-label="Save">
+        <!-- Кнопка 1: Сохранить -->
+        <button class="cat-btn btn-save" onclick="askSave()" aria-label="Сохранить фото">
             <svg viewBox="0 0 24 24">
                 <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
             </svg>
         </button>
 
-        <!-- Кнопка следующий кот -->
-        <button class="cat-btn" onclick="nextCat()" aria-label="Next">
+        <!-- Кнопка 2: Следующий кот -->
+        <button class="cat-btn btn-next" onclick="nextCat()" aria-label="Следующий кот">
             <svg viewBox="0 0 24 24">
-                <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
             </svg>
         </button>
     </div>
@@ -127,88 +155,105 @@
 <script>
 const img = document.getElementById('catImg');
 const status = document.getElementById('status');
+const loader = document.getElementById('loader');
 let isLoading = false;
+
+// Проверка наличия интернета
+function checkOnline() {
+    if (!navigator.onLine) {
+        showStatus('Нет подключения к интернету');
+        return false;
+    }
+    return true;
+}
+
+function showStatus(text) {
+    status.textContent = text;
+    status.style.display = 'block';
+    setTimeout(() => {
+        status.style.display = 'none';
+    }, 3000);
+}
 
 async function nextCat() {
     if (isLoading) return;
+    if (!checkOnline()) return;
+    
     isLoading = true;
-
-    status.style.display = 'block';
-    status.textContent = 'Загружаем кота...';
     img.classList.remove('loaded');
-    img.removeAttribute('src');
+    loader.style.display = 'block';
+    status.style.display = 'none';
 
     try {
-        const res = await fetch('https://api.thecatapi.com/v1/images/search');
+        // Добавляем timestamp чтобы избежать кэширования на мобильных сетях
+        const res = await fetch(`https://api.thecatapi.com/v1/images/search?_t=${Date.now()}`);
+        if (!res.ok) throw new Error('Ошибка API');
+        
         const data = await res.json();
         const url = data[0].url;
 
         img.onload = () => {
-            status.style.display = 'none';
+            loader.style.display = 'none';
             img.classList.add('loaded');
             isLoading = false;
         };
 
         img.onerror = () => {
-            status.textContent = 'Ошибка загрузки кота.';
+            loader.style.display = 'none';
+            showStatus('Ошибка загрузки фото');
             isLoading = false;
         };
 
         img.src = url;
     } catch (e) {
-        status.textContent = 'Не удалось получить кота.';
+        loader.style.display = 'none';
+        showStatus('Проверьте соединение и попробуйте снова');
         isLoading = false;
     }
 }
 
 async function askSave() {
     if (!img.src || !img.classList.contains('loaded')) return;
-    
-    // Вызываем стандартное системное окно телефона (Да / Отмена)
-    const wantsToSave = confirm('Вы хотите сохранить кота в галерею?');
-    
-    // Если пользователь нажал "Отмена", просто ничего не делаем (окно закроется)
-    // Если нажал "Да" (ОК), запускаем сохранение:
-    if (wantsToSave) {
-        status.style.display = 'block';
-        status.textContent = 'Сохраняем...';
+    if (!checkOnline()) return;
 
-        try {
-            const response = await fetch(img.src);
-            if (!response.ok) throw new Error('Ошибка сети');
-            
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            
-            const extension = img.src.split('.').pop() || 'jpg';
-            a.download = `cat_${Date.now()}.${extension}`;
-            
-            document.body.appendChild(a);
-            a.click(); 
-            
-            setTimeout(() => {
-                window.URL.revokeObjectURL(blobUrl);
-                a.remove();
-                status.style.display = 'none';
-            }, 150);
-            
-        } catch (e) {
-            console.error('Ошибка:', e);
-            status.style.display = 'none';
-            alert('Браузер блокирует скачивание. Зажмите картинку пальцем и выберите «Сохранить».');
+    try {
+        // Пытаемся скачать через blob (работает на большинстве ПК и некоторых Android)
+        const response = await fetch(img.src);
+        if (!response.ok) throw new Error('Network error');
+        
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = blobUrl;
+        
+        // Очищаем имя файла от лишних параметров URL
+        const cleanUrl = img.src.split('?')[0];
+        const extension = cleanUrl.split('.').pop() || 'jpg';
+        a.download = `cat_${Date.now()}.${extension}`;
+        
+        document.body.appendChild(a);
+        a.click(); 
+        
+        setTimeout(() => {
+            window.URL.revokeObjectURL(blobUrl);
+            a.remove();
+        }, 150);
+        
+    } catch (e) {
+        // Фолбэк для мобильных браузеров (iOS Safari, некоторые версии Chrome), 
+        // которые блокируют скачивание cross-origin картинок через fetch на мобильном интернете.
+        // Открытие в новой вкладке позволяет использовать нативное "Зажать и сохранить"
+        const saveManually = confirm('Автоматическое сохранение заблокировано браузером. Открыть фото для сохранения? (Зажмите фото пальцем и выберите "Сохранить в галерею")');
+        if (saveManually) {
+            window.open(img.src, '_blank');
         }
     }
 }
 
-// первый кот при старте
-nextCat();
+// Загружаем первого кота при старте
+window.addEventListener('DOMContentLoaded', nextCat);
 </script>
 
 </body>
 </html>
-
-```
