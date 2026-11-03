@@ -1,3 +1,12 @@
+Появление новой вкладки при скачивании — это защитная реакция мобильных браузеров (особенно Safari на iPhone), когда они видят, что скачивание происходит после сетевого запроса (`fetch`), а не сразу по клику пользователя.
+
+Кроме того, важно понимать: **ни один сайт технически не может молча сохранить картинку прямо в приложение «Фото» (Галерею) телефона.** Скачанные через браузер файлы попадают в папку «Загрузки» (Android) или в приложение «Файлы» (iPhone).
+
+Но мы можем добавить красивое всплывающее окно с вопросом «Вы хотите сохранить в галерею? [Да / Нет]». При нажатии «Да» скрипт форсированно скачает файл через создание виртуальной ссылки (на Android это часто сразу отображается в Галерее, на iPhone предложит загрузить файл).
+
+Вот обновленный код с диалоговым окном:
+
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -53,7 +62,7 @@
             transition:opacity .5s ease-in-out,filter .5s,transform .5s;
             filter:blur(10px);
             transform:scale(1.05);
-            -webkit-touch-callout: default; /* Оставляем возможность долгого тапа */
+            -webkit-touch-callout: default; 
         }
         .cat-image.loaded{
             opacity:1;
@@ -97,6 +106,67 @@
         .cat-btn:active{
             transform:scale(0.95);
         }
+
+        /* --- Стили для модального окна --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none; /* Скрыто по умолчанию */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: #fff;
+            padding: 25px;
+            border-radius: 24px;
+            text-align: center;
+            width: 80%;
+            max-width: 320px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-box p {
+            margin: 0 0 25px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c2c2e;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .btn-yes {
+            background: #007aff; /* iOS Blue */
+            color: white;
+        }
+        .btn-no {
+            background: #f2f2f7;
+            color: #ff3b30; /* iOS Red */
+        }
+        .modal-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -108,7 +178,8 @@
     </div>
 
     <div class="controls">
-        <button class="cat-btn" onclick="saveCat()" aria-label="Save">
+        <!-- Кнопка теперь вызывает окно askSave() -->
+        <button class="cat-btn" onclick="askSave()" aria-label="Save">
             <svg viewBox="0 0 24 24">
                 <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
             </svg>
@@ -122,9 +193,21 @@
     </div>
 </div>
 
+<!-- Модальное окно -->
+<div id="saveModal" class="modal-overlay">
+    <div class="modal-box">
+        <p>Вы хотите сохранить кота в галерею?</p>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes" onclick="confirmSave()">Да</button>
+            <button class="modal-btn btn-no" onclick="closeModal()">Нет</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const img = document.getElementById('catImg');
 const status = document.getElementById('status');
+const modal = document.getElementById('saveModal');
 let isLoading = false;
 
 async function nextCat() {
@@ -159,52 +242,53 @@ async function nextCat() {
     }
 }
 
-async function saveCat() {
+// Показ окна
+function askSave() {
     if (!img.src || !img.classList.contains('loaded')) return;
+    modal.style.display = 'flex';
+}
 
+// Закрытие окна
+function closeModal() {
+    modal.style.display = 'none';
+}
+
+// Действие при нажатии "Да"
+async function confirmSave() {
+    closeModal(); // Закрываем окно
+    
     status.style.display = 'block';
     status.textContent = 'Сохраняем...';
 
     try {
-        // Делаем запрос к изображению (режим cors обязателен для преобразования в Blob)
-        const response = await fetch(img.src, {
-            mode: 'cors',
-            cache: 'no-cache'
-        });
-        
+        // Запрашиваем файл в память, чтобы не открывать новую вкладку
+        const response = await fetch(img.src);
         if (!response.ok) throw new Error('Ошибка сети');
         
-        // Превращаем ответ в бинарный файл
         const blob = await response.blob();
-        
-        // Создаем временную ссылку в памяти браузера
         const blobUrl = window.URL.createObjectURL(blob);
         
-        // Создаем невидимый тег <a> для имитации клика пользователя
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = blobUrl;
         
-        // Указываем имя файла, что форсирует скачивание, а не открытие в новой вкладке
+        // Установка имени форсирует именно скачивание файла
         const extension = img.src.split('.').pop() || 'jpg';
         a.download = `cat_${Date.now()}.${extension}`;
         
         document.body.appendChild(a);
+        a.click(); // Симулируем нажатие для старта скачивания
         
-        // Клик! Запускает скачивание.
-        a.click();
-        
-        // Очищаем память
         setTimeout(() => {
             window.URL.revokeObjectURL(blobUrl);
             a.remove();
             status.style.display = 'none';
-        }, 100);
+        }, 150);
         
     } catch (e) {
-        console.error('Ошибка сохранения:', e);
+        console.error('Ошибка:', e);
         status.style.display = 'none';
-        alert('Браузер блокирует скачивание. Зажмите картинку пальцем и выберите «Сохранить».');
+        alert('Не удалось скачать автоматически. Зажмите картинку пальцем и выберите «Сохранить».');
     }
 }
 
@@ -214,3 +298,5 @@ nextCat();
 
 </body>
 </html>
+
+```
