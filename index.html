@@ -16,6 +16,7 @@
             align-items:center;
             background:radial-gradient(circle at center,#f8f9fb 0%,#eef1f5 100%);
             font-family:-apple-system,system-ui,sans-serif;
+            box-sizing: border-box;
         }
         .device-chassis{
             width:100%;
@@ -30,6 +31,7 @@
             flex-direction:column;
             align-items:center;
             justify-content:space-between;
+            box-sizing: border-box;
         }
         .display-panel{
             width:100%;
@@ -67,6 +69,12 @@
             text-align:center;
             padding:0 16px;
         }
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+        }
         .cat-btn{
             width:85px;
             height:85px;
@@ -95,14 +103,24 @@
 <div class="device-chassis">
     <div class="display-panel">
         <div class="status-msg" id="status" style="display:none;"></div>
-        <img id="catImg" class="cat-image" src="" alt="Cat">
+        <img id="catImg" class="cat-image" src="" alt="Cat" crossorigin="anonymous">
     </div>
 
-    <button class="cat-btn" onclick="nextCat()" aria-label="Next">
-        <svg viewBox="0 0 24 24">
-            <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
-        </svg>
-    </button>
+    <div class="controls">
+        <!-- Кнопка "Сохранить" -->
+        <button class="cat-btn" onclick="saveCat()" aria-label="Save">
+            <svg viewBox="0 0 24 24">
+                <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+            </svg>
+        </button>
+
+        <!-- Кнопка "Следующий кот" -->
+        <button class="cat-btn" onclick="nextCat()" aria-label="Next">
+            <svg viewBox="0 0 24 24">
+                <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
+            </svg>
+        </button>
+    </div>
 </div>
 
 <script>
@@ -139,6 +157,40 @@ async function nextCat() {
     } catch (e) {
         status.textContent = 'Не удалось получить кота.';
         isLoading = false;
+    }
+}
+
+// Функция для сохранения кота
+async function saveCat() {
+    if (!img.src || !img.classList.contains('loaded')) return;
+
+    try {
+        // Скачиваем изображение как Blob (бинарные данные), чтобы форсировать скачивание
+        const response = await fetch(img.src);
+        const blob = await response.blob();
+        
+        // Создаем локальную ссылку на скачанный файл
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Создаем невидимую ссылку и "кликаем" по ней
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = blobUrl;
+        
+        // Извлекаем расширение (обычно jpg или png) из URL
+        const extension = img.src.split('.').pop() || 'jpg';
+        a.download = `cat_${Date.now()}.${extension}`; // Имя файла для сохранения
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // Убираем за собой
+        window.URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+        
+    } catch (e) {
+        console.error('Ошибка при сохранении:', e);
+        alert('Не удалось сохранить котика. Возможно, мешают настройки безопасности браузера.');
     }
 }
 
