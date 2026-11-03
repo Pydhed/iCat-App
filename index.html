@@ -53,8 +53,7 @@
             transition:opacity .5s ease-in-out,filter .5s,transform .5s;
             filter:blur(10px);
             transform:scale(1.05);
-            /* Разрешаем стандартное меню по долгому тапу на iOS/Android */
-            -webkit-touch-callout: default; 
+            -webkit-touch-callout: default; /* Оставляем возможность долгого тапа */
         }
         .cat-image.loaded{
             opacity:1;
@@ -109,14 +108,12 @@
     </div>
 
     <div class="controls">
-        <!-- Кнопка "Сохранить" -->
         <button class="cat-btn" onclick="saveCat()" aria-label="Save">
             <svg viewBox="0 0 24 24">
                 <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
             </svg>
         </button>
 
-        <!-- Кнопка "Следующий кот" -->
         <button class="cat-btn" onclick="nextCat()" aria-label="Next">
             <svg viewBox="0 0 24 24">
                 <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
@@ -169,43 +166,45 @@ async function saveCat() {
     status.textContent = 'Сохраняем...';
 
     try {
-        // Добавляем ?download=timestamp, чтобы обойти кэш браузера без CORS
-        const fetchUrl = img.src + (img.src.includes('?') ? '&' : '?') + 'download=' + Date.now();
-        const response = await fetch(fetchUrl);
+        // Делаем запрос к изображению (режим cors обязателен для преобразования в Blob)
+        const response = await fetch(img.src, {
+            mode: 'cors',
+            cache: 'no-cache'
+        });
         
-        if (!response.ok) throw new Error('Network error');
+        if (!response.ok) throw new Error('Ошибка сети');
         
+        // Превращаем ответ в бинарный файл
         const blob = await response.blob();
-        const fileName = `cat_${Date.now()}.jpg`;
-        const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-
-        // На телефонах вызываем системное меню (там будет опция "Сохранить изображение")
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        
+        // Создаем временную ссылку в памяти браузера
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Создаем невидимый тег <a> для имитации клика пользователя
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = blobUrl;
+        
+        // Указываем имя файла, что форсирует скачивание, а не открытие в новой вкладке
+        const extension = img.src.split('.').pop() || 'jpg';
+        a.download = `cat_${Date.now()}.${extension}`;
+        
+        document.body.appendChild(a);
+        
+        // Клик! Запускает скачивание.
+        a.click();
+        
+        // Очищаем память
+        setTimeout(() => {
+            window.URL.revokeObjectURL(blobUrl);
+            a.remove();
             status.style.display = 'none';
-            await navigator.share({
-                files: [file]
-            });
-        } else {
-            // Фолбэк для компьютеров
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            a.download = fileName;
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => {
-                window.URL.revokeObjectURL(blobUrl);
-                a.remove();
-            }, 100);
-            status.style.display = 'none';
-        }
+        }, 100);
+        
     } catch (e) {
+        console.error('Ошибка сохранения:', e);
         status.style.display = 'none';
-        // Если скачивание заблокировано (например, в браузере Telegram или VK)
-        alert('Чтобы сохранить, зажмите картинку пальцем на пару секунд и выберите «Сохранить» в меню.');
+        alert('Браузер блокирует скачивание. Зажмите картинку пальцем и выберите «Сохранить».');
     }
 }
 
