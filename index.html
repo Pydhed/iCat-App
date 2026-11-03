@@ -1,10 +1,8 @@
-Появление новой вкладки при скачивании — это защитная реакция мобильных браузеров (особенно Safari на iPhone), когда они видят, что скачивание происходит после сетевого запроса (`fetch`), а не сразу по клику пользователя.
+Понял вас! Дополнительный HTML-код для красивого окошка мог перегрузить интерфейс или отображаться некорректно.
 
-Кроме того, важно понимать: **ни один сайт технически не может молча сохранить картинку прямо в приложение «Фото» (Галерею) телефона.** Скачанные через браузер файлы попадают в папку «Загрузки» (Android) или в приложение «Файлы» (iPhone).
+Чтобы вернуть идеальную чистоту (только экран и 2 кнопки) и при этом оставить вопрос «Да/Нет», мы можем использовать **стандартное системное окно телефона**. Оно вызывается одной строчкой кода (`confirm`), не требует лишнего текста на самой странице и выглядит привычно для пользователя.
 
-Но мы можем добавить красивое всплывающее окно с вопросом «Вы хотите сохранить в галерею? [Да / Нет]». При нажатии «Да» скрипт форсированно скачает файл через создание виртуальной ссылки (на Android это часто сразу отображается в Галерее, на iPhone предложит загрузить файл).
-
-Вот обновленный код с диалоговым окном:
+Вот чистый код, как было раньше, но с добавленным системным вопросом при скачивании:
 
 ```html
 <!DOCTYPE html>
@@ -106,67 +104,6 @@
         .cat-btn:active{
             transform:scale(0.95);
         }
-
-        /* --- Стили для модального окна --- */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            display: none; /* Скрыто по умолчанию */
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-box {
-            background: #fff;
-            padding: 25px;
-            border-radius: 24px;
-            text-align: center;
-            width: 80%;
-            max-width: 320px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .modal-box p {
-            margin: 0 0 25px 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c2c2e;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 15px;
-        }
-        .modal-btn {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-        }
-        .btn-yes {
-            background: #007aff; /* iOS Blue */
-            color: white;
-        }
-        .btn-no {
-            background: #f2f2f7;
-            color: #ff3b30; /* iOS Red */
-        }
-        .modal-btn:active {
-            transform: scale(0.95);
-            opacity: 0.8;
-        }
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
     </style>
 </head>
 <body>
@@ -178,13 +115,14 @@
     </div>
 
     <div class="controls">
-        <!-- Кнопка теперь вызывает окно askSave() -->
+        <!-- Кнопка сохранения -->
         <button class="cat-btn" onclick="askSave()" aria-label="Save">
             <svg viewBox="0 0 24 24">
                 <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
             </svg>
         </button>
 
+        <!-- Кнопка следующий кот -->
         <button class="cat-btn" onclick="nextCat()" aria-label="Next">
             <svg viewBox="0 0 24 24">
                 <path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M9,10C9.55,10 10,10.45 10,11C10,11.55 9.55,12 9,12C8.45,12 8,11.55 8,11C8,10.45 8.45,10 9,10M15,10C15.55,10 16,10.45 16,11C16,11.55 15.55,12 15,12C14.45,12 14,11.55 14,11C14,10.45 14.45,10 15,10M12,16.5C14.33,16.5 16.32,15.13 17.14,13.14L16.5,12.5C15.91,13.97 14.34,15 12.5,15C10.66,15 9.09,13.97 8.5,12.5L7.86,13.14C8.68,15.13 10.67,16.5 12,16.5Z" />
@@ -193,21 +131,9 @@
     </div>
 </div>
 
-<!-- Модальное окно -->
-<div id="saveModal" class="modal-overlay">
-    <div class="modal-box">
-        <p>Вы хотите сохранить кота в галерею?</p>
-        <div class="modal-buttons">
-            <button class="modal-btn btn-yes" onclick="confirmSave()">Да</button>
-            <button class="modal-btn btn-no" onclick="closeModal()">Нет</button>
-        </div>
-    </div>
-</div>
-
 <script>
 const img = document.getElementById('catImg');
 const status = document.getElementById('status');
-const modal = document.getElementById('saveModal');
 let isLoading = false;
 
 async function nextCat() {
@@ -242,53 +168,46 @@ async function nextCat() {
     }
 }
 
-// Показ окна
-function askSave() {
+async function askSave() {
     if (!img.src || !img.classList.contains('loaded')) return;
-    modal.style.display = 'flex';
-}
-
-// Закрытие окна
-function closeModal() {
-    modal.style.display = 'none';
-}
-
-// Действие при нажатии "Да"
-async function confirmSave() {
-    closeModal(); // Закрываем окно
     
-    status.style.display = 'block';
-    status.textContent = 'Сохраняем...';
+    // Вызываем стандартное системное окно телефона (Да / Отмена)
+    const wantsToSave = confirm('Вы хотите сохранить кота в галерею?');
+    
+    // Если пользователь нажал "Отмена", просто ничего не делаем (окно закроется)
+    // Если нажал "Да" (ОК), запускаем сохранение:
+    if (wantsToSave) {
+        status.style.display = 'block';
+        status.textContent = 'Сохраняем...';
 
-    try {
-        // Запрашиваем файл в память, чтобы не открывать новую вкладку
-        const response = await fetch(img.src);
-        if (!response.ok) throw new Error('Ошибка сети');
-        
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = blobUrl;
-        
-        // Установка имени форсирует именно скачивание файла
-        const extension = img.src.split('.').pop() || 'jpg';
-        a.download = `cat_${Date.now()}.${extension}`;
-        
-        document.body.appendChild(a);
-        a.click(); // Симулируем нажатие для старта скачивания
-        
-        setTimeout(() => {
-            window.URL.revokeObjectURL(blobUrl);
-            a.remove();
+        try {
+            const response = await fetch(img.src);
+            if (!response.ok) throw new Error('Ошибка сети');
+            
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            
+            const extension = img.src.split('.').pop() || 'jpg';
+            a.download = `cat_${Date.now()}.${extension}`;
+            
+            document.body.appendChild(a);
+            a.click(); 
+            
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl);
+                a.remove();
+                status.style.display = 'none';
+            }, 150);
+            
+        } catch (e) {
+            console.error('Ошибка:', e);
             status.style.display = 'none';
-        }, 150);
-        
-    } catch (e) {
-        console.error('Ошибка:', e);
-        status.style.display = 'none';
-        alert('Не удалось скачать автоматически. Зажмите картинку пальцем и выберите «Сохранить».');
+            alert('Браузер блокирует скачивание. Зажмите картинку пальцем и выберите «Сохранить».');
+        }
     }
 }
 
